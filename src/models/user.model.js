@@ -58,7 +58,7 @@ userSchema.pre("save", async function (next) {
   this.password = await bcrypt.hash(this.password, 10);
 
   // Call the next middleware or complete the save operation
-  next();
+  return next();
 });
 
 userSchema.methods.isPasswordCorrect = async function (password) {
