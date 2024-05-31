@@ -30,11 +30,17 @@ const userSchema = new Schema(
       lowercase: true,
     },
     avatar: {
-      type: String,
+      type: {
+        public_id: String,
+        url: String,
+      },
       required: true,
     },
     coverImage: {
-      type: String,
+      type: {
+        public_id: String,
+        url: String,
+      },
     },
     watchHistory: {
       type: Schema.Types.ObjectId,

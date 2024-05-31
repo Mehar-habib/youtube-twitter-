@@ -35,14 +35,14 @@ router.route("/refresh-token").post(refreshAccessToken);
 router
   .route("/change-password")
   .post(upload.none(), verifyJWT, changeCurrentPassword);
-router.route("/current-user").post(upload.none(), verifyJWT, getCurrentUser);
-router.route("/update-user").post(upload.none(), verifyJWT, updateUserDetails);
+router.route("/current-user").get(upload.none(), verifyJWT, getCurrentUser);
+router.route("/update-user").patch(upload.none(), verifyJWT, updateUserDetails);
 router
   .route("/update-avatar")
-  .post(upload.single("avatar"), verifyJWT, updateUserAvatar);
+  .patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
 
 router
   .route("/update-coverImg")
-  .post(upload.single("coverImage"), verifyJWT, updateUserCoverImage);
+  .patch(verifyJWT, upload.single("coverImage"), updateUserCoverImage);
 
 export default router;

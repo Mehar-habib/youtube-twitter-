@@ -2,7 +2,7 @@ import { User } from "../models/user.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import uploadCloudinary from "../utils/cloudinary.js";
+import { deleteCloudinary, uploadCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -51,7 +51,6 @@ const registerUser = asyncHandler(async (req, res, next) => {
 
   if (userExists) throw new ApiError(409, "email already exists");
 
-  console.log("request files => ", req.files);
   const avatarLocalPath = req.files?.avatar[0]?.path;
   let coverImageLocalPath;
   if (
@@ -73,8 +72,14 @@ const registerUser = asyncHandler(async (req, res, next) => {
 
   const user = await User.create({
     fullName,
-    avatar: avatar.url,
-    coverImage: coverImage?.url || "",
+    avatar: {
+      public_id: avatar.public_id || "",
+      url: avatar.secure_url,
+    },
+    coverImage: {
+      public_id: coverImage?.public_id || "",
+      url: coverImage.secure_url,
+    },
     username: username.toLowerCase(),
     email,
     password,
@@ -187,20 +192,22 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       throw new ApiError(400, "Refresh token is expired");
     }
 
-    const { newAccessToken, newRefreshToken } =
-      await generateAccessAndRefreshTokens(user._id);
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+      user._id
+    );
+
     const options = {
       httpOnly: true,
       secure: true,
     };
     return res
       .status(200)
-      .cookie("accessToken", newAccessToken, options)
-      .cookie("refreshToken", newRefreshToken, options)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
       .json(
         new ApiResponse(
           200,
-          { accessToken: newAccessToken, refreshToken: newRefreshToken },
+          { accessToken, refreshToken },
           "refresh token generated successfully"
         )
       );
@@ -263,19 +270,29 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   if (!avatar.url) {
     throw new ApiError(400, "Error while uploading avatar");
   }
-  const user = await User.findByIdAndUpdate(
+  const user = await User.findById(req.user._id).select("avatar");
+  const avatarToDelete = user.avatar.public_id;
+  const updatedUser = await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set: {
-        avatar: avatar.url,
+        avatar: {
+          public_id: avatar.public_id,
+          url: avatar.secure_url,
+        },
       },
     },
     { new: true }
   ).select("-password");
+  if (!avatarToDelete && updatedUser.avatar.public_id) {
+    await deleteCloudinary(avatarToDelete);
+  }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "user avatar updated successfully"));
+    .json(
+      new ApiResponse(200, updatedUser, "user avatar updated successfully")
+    );
 });
 
 // ! update user Cover Image
@@ -288,18 +305,30 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   if (!coverImage.url) {
     throw new ApiError(400, "Error while uploading cover image");
   }
-  const user = await User.findByIdAndUpdate(
+  const user = await User.findById(req.user._id).select("coverImage");
+  const coverImageToDelete = user.coverImage.public_id;
+
+  const updatedUser = await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set: {
-        coverImage: coverImage.url,
+        coverImage: {
+          public_id: coverImage.public_id,
+          url: coverImage.secure_url,
+        },
       },
     },
     { new: true }
   ).select("-password");
+
+  if (coverImageToDelete && updatedUser.coverImage.public_id) {
+    await deleteCloudinary(coverImageToDelete);
+  }
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "user cover image updated successfully"));
+    .json(
+      new ApiResponse(200, updatedUser, "user cover image updated successfully")
+    );
 });
 
 export {
