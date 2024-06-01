@@ -1,17 +1,18 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import userRouter from "./routes/user.route.js";
+import userRouter from "./routes/user.routes.js";
+import commentRouter from "./routes/comment.routes.js";
 
 // Create a new instance of an Express application
 const app = new express();
 
 // Set up CORS middleware with specified origin and credentials support
 app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN, // Allow CORS from the origin specified in the environment variables
-    credentials: true, // Allow cookies to be sent with requests
-  })
+    cors({
+        origin: process.env.CORS_ORIGIN, // Allow CORS from the origin specified in the environment variables
+        credentials: true, // Allow cookies to be sent with requests
+    })
 );
 // Middleware to parse incoming JSON requests with a size limit of 16kb
 app.use(express.json({ limit: "16kb" }));
@@ -23,4 +24,5 @@ app.use(cookieParser());
 app.use(express.static("public"));
 
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/comment", commentRouter);
 export default app;
